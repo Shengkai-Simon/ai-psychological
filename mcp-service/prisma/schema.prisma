@@ -1,0 +1,75 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enum for participant's role
+enum Role {
+  Parent
+  Child
+}
+
+// Enum for survey session status
+enum SurveySessionStatus {
+  PENDING // Waiting for all participants to join and submit
+  PROCESSING // AI analysis is in progress
+  COMPLETED // Report is ready
+  FAILED // AI analysis failed
+}
+
+// Represents a single survey session, linking one parent and one child.
+model SurveySession {
+  id        String              @id @default(cuid())
+  joinCode  String              @unique // 6-digit code for the other party to join
+  status    SurveySessionStatus @default(PENDING)
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  participants Participant[]
+  report       Report?
+}
+
+// Represents a participant (Parent or Child) in a survey.
+model Participant {
+  id          String   @id @default(cuid())
+  name        String
+  age         Int
+  gender      String
+  role        Role
+  isCompleted Boolean  @default(false) // Has this participant submitted their answers?
+  createdAt   DateTime @default(now())
+
+  surveySessionId String
+  surveySession   SurveySession @relation(fields: [surveySessionId], references: [id], onDelete: Cascade)
+
+  answers Answer[]
+}
+
+// Represents an answer to a single question.
+model Answer {
+  id         String   @id @default(cuid())
+  questionId String   // e.g., "child_q1", "parent_q5"
+  answer     String   // The selected option or text
+  createdAt  DateTime @default(now())
+
+  participantId String
+  participant   Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+}
+
+// Stores the AI-generated report.
+model Report {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // Raw JSON from AI.
+  // Based on the diagram, it would include depth, breadth, parentingGuidance, etc.
+  content Json
+
+  surveySessionId String        @unique
+  surveySession   SurveySession @relation(fields: [surveySessionId], references: [id], onDelete: Cascade)
+}
