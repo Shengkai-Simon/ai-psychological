@@ -1,0 +1,28 @@
+services:
+  # PostgreSQL 17
+  postgres:
+    image: postgres:17-alpine
+    container_name: postgres_psychological
+    environment:
+      POSTGRES_USER: rootuser
+      POSTGRES_PASSWORD: rootpass
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # - ./db/initdb:/docker-entrypoint-initdb.d   # inital SQL Script
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rootuser -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - backend
+
+volumes:
+  postgres-data:
+
+networks:
+  backend:
+    driver: bridge
